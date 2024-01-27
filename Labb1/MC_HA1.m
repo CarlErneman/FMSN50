@@ -36,16 +36,19 @@ for month = 1:12
 
         %confindence interval
         standard_dev = std(P(draw_power1));
-        upper_bound1(samples/step_size, month) = tau1(samples/step_size, month)+abs(norminv(0.995))*std(P(draw1))/(sqrt(samples));
-        lower_bound1(samples/step_size, month) = tau1(samples/step_size, month)-abs(norminv(0.995))*std(P(draw1))/(sqrt(samples));
+        upper_bound1(samples/step_size, month) = tau1(samples/step_size, month)+abs(norminv(0.995))*std(draw_power1)/(sqrt(samples));
+        lower_bound1(samples/step_size, month) = tau1(samples/step_size, month)-abs(norminv(0.995))*std(draw_power1)/(sqrt(samples));
         conf_width1(samples/step_size, month)=upper_bound1(samples/step_size, month)-lower_bound1(samples/step_size, month);
     end
 end
 
 month_plot = 1;
 
+conf_width1(100, month_plot)
+
 figure(1);
 hold on
+title("Crude Monte-Carlo")
 plot(100:step_size:N,tau1(:,month_plot),'LineWidth',2.5,'color','r')
 plot(100:step_size:N,upper_bound1(:,month_plot),'--','LineWidth',1.5,'color','g')
 plot(100:step_size:N,lower_bound1(:,month_plot),'--','LineWidth',1.5,'color','g')
@@ -63,14 +66,41 @@ x=rand(1,N);
 tau2 =zeros(N/step_size,12);
 lower_bound2 = zeros(N/step_size,12);
 upper_bound2 = zeros(N/step_size,12);
-conf_width2 =zeros(100,12);
+conf_width2 = zeros(100,12);
 
-Fab = @(ab, month) wblinv(ab, lambda(month), k(month));
-Inv = @(U, month) wblinv(U, lambda(month), k(month));
+Fab = @(ab, month) wblcdf(ab, lambda(month), k(month));
+Inv = @(U, Fa, Fb) wblinv(U*(Fb-Fa) + Fa);
+
+for month = 1:12
+%To draw compare different sample sizes
+    Fa = Fab(a, month);
+    Fb = Fab(b, month);
+
+    for samples = 100:step_size:N
+        %Inverse of calculated in 1b) with a scaing factor (Fb-Fa)
+        draw2 = Inv(rand(1,samples), Fa, Fb)*(Fb-Fa); 
 
 
+        draw_power2 = P(draw2);
 
+        %Expected value
+        tau2(samples/step_size, month) = mean(draw_power2);
 
-const1 = [5.8 6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5];
-const2 = [3 2.5 2.5 2.5 2.5 2.5 2.5 2.5 2.5 2.5 2.5 2.5];
+        %confindence interval
+        standard_dev = std(P(draw_power1));
+        upper_bound2(samples/step_size, month) = tau2(samples/step_size, month)+abs(norminv(0.995))*std(draw_power2)/(sqrt(samples));
+        lower_bound2(samples/step_size, month) = tau2(samples/step_size, month)-abs(norminv(0.995))*std(draw_power2)/(sqrt(samples));
+        conf_width2(samples/step_size, month)=upper_bound2(samples/step_size, month)-lower_bound2(samples/step_size, month);
+    end
+end
+
+conf_width2(100, month_plot)
+
+figure(2);
+hold on
+title("Truncated with Crude Monte-Carlo")
+plot(100:step_size:N,tau1(:,month_plot),'LineWidth',2.5,'color','r')
+plot(100:step_size:N,upper_bound1(:,month_plot),'--','LineWidth',1.5,'color','g')
+plot(100:step_size:N,lower_bound1(:,month_plot),'--','LineWidth',1.5,'color','g')
+hold off
 
