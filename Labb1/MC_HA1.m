@@ -23,7 +23,7 @@ upper_bound1 = zeros(N/step_size,12);
 conf_width1 =zeros(100,12);
 
 
-%Crude monte-carlo
+%% Crude monte-carlo
 for month = 1:12
 
 %To draw compare different sample sizes
@@ -57,7 +57,7 @@ hold off
 %conf_width1 = upper_bound1(100, month_plot) - lower_bound1(100, month_plot)
 
 
-%Truncated with standard monte-carlo, only when wind generates power
+%% Truncated with standard monte-carlo, only when wind generates power
 a=4;
 b=30;
 x=rand(1,N);
@@ -69,7 +69,7 @@ upper_bound2 = zeros(N/step_size,12);
 conf_width2 = zeros(100,12);
 
 Fab = @(ab, month) wblcdf(ab, lambda(month), k(month));
-Inv = @(U, Fa, Fb) wblinv(U*(Fb-Fa) + Fa);
+Inv = @(U, Fa, Fb, month) wblinv((U*(Fb-Fa) + Fa), lambda(month), k(month));
 
 for month = 1:12
 %To draw compare different sample sizes
@@ -77,17 +77,17 @@ for month = 1:12
     Fb = Fab(b, month);
 
     for samples = 100:step_size:N
-        %Inverse of calculated in 1b) with a scaing factor (Fb-Fa)
-        draw2 = Inv(rand(1,samples), Fa, Fb)*(Fb-Fa); 
+        %Inverse of calculated in 1b)
+        draw2 = Inv(rand(1,samples), Fa, Fb, month); 
 
-
-        draw_power2 = P(draw2);
+        %Power function with scaling factor (Fb-Fa).
+        draw_power2 = P(draw2)*(Fb-Fa);
 
         %Expected value
         tau2(samples/step_size, month) = mean(draw_power2);
 
         %confindence interval
-        standard_dev = std(P(draw_power1));
+        standard_dev = std(P(draw_power2));
         upper_bound2(samples/step_size, month) = tau2(samples/step_size, month)+abs(norminv(0.995))*std(draw_power2)/(sqrt(samples));
         lower_bound2(samples/step_size, month) = tau2(samples/step_size, month)-abs(norminv(0.995))*std(draw_power2)/(sqrt(samples));
         conf_width2(samples/step_size, month)=upper_bound2(samples/step_size, month)-lower_bound2(samples/step_size, month);
@@ -99,8 +99,49 @@ conf_width2(100, month_plot)
 figure(2);
 hold on
 title("Truncated with Crude Monte-Carlo")
-plot(100:step_size:N,tau1(:,month_plot),'LineWidth',2.5,'color','r')
-plot(100:step_size:N,upper_bound1(:,month_plot),'--','LineWidth',1.5,'color','g')
-plot(100:step_size:N,lower_bound1(:,month_plot),'--','LineWidth',1.5,'color','g')
+plot(100:step_size:N,tau2(:,month_plot),'LineWidth',2.5,'color','r')
+plot(100:step_size:N,upper_bound2(:,month_plot),'--','LineWidth',1.5,'color','g')
+plot(100:step_size:N,lower_bound2(:,month_plot),'--','LineWidth',1.5,'color','g')
 hold off
 
+
+%% 2b) Controll variate MC
+%Predefined output vectors
+tau3 =zeros(N/step_size,12);
+lower_bound3 = zeros(N/step_size,12);
+upper_bound3 = zeros(N/step_size,12);
+conf_width3 = zeros(100,12);
+
+for month = 1:12
+
+%To draw compare different sample sizes
+    for samples = 100:step_size:N
+
+        draw3 = wblrnd(lambda(month), k(month), 1, samples);
+        Y = wblrnd(lambda(month), k(month), 1, samples);
+        expected_Y = gamma(1+(1/k(month)))*lambda(month);
+        
+        draw_power3 = P(draw3);
+        cov_matrix = cov(draw_power3, Y);
+        beta = -cov_matrix(1,2)/cov_matrix(2,2);
+
+        %Expected value
+        tau3(samples/step_size, month) = mean(draw_power3) - beta*(mean(Y)-expected_Y);
+
+        %confindence interval
+        standard_dev = std(P(draw_power3));
+        upper_bound3(samples/step_size, month) = tau3(samples/step_size, month)+abs(norminv(0.995))*std(draw_power3)/(sqrt(samples));
+        lower_bound3(samples/step_size, month) = tau3(samples/step_size, month)-abs(norminv(0.995))*std(draw_power3)/(sqrt(samples));
+        conf_width3(samples/step_size, month)=upper_bound3(samples/step_size, month)-lower_bound3(samples/step_size, month);
+    end
+end
+
+conf_width3(100, month_plot)
+
+figure(3);
+hold on
+title("Control variate Monte-Carlo")
+plot(100:step_size:N,tau3(:,month_plot),'LineWidth',2.5,'color','r')
+plot(100:step_size:N,upper_bound3(:,month_plot),'--','LineWidth',1.5,'color','g')
+plot(100:step_size:N,lower_bound3(:,month_plot),'--','LineWidth',1.5,'color','g')
+hold off
