@@ -225,6 +225,70 @@ plot(100:step_size:N,lower_bound5_IS(:,month_plot),'--','LineWidth',1.5,'color',
 hold off
 
 
-%% Antithetic sampling
+%% 2d) Antithetic sampling
+
+%Här kan man både göra anthetic sampling på hela intervallet, eller så kan
+%intervallet delas upp i de ökande och konstanta delarna. Han förklarade
+%det som att väntevärdet då Power funktionen är i intervallet (11, 25) är
+%såklart också konstant, då funktionen är konstant. Mindre beräkningar.
+
+%Predefined output vectors
+tau6 =zeros(N/step_size,12);
+lower_bound6 = zeros(N/step_size,12);
+upper_bound6 = zeros(N/step_size,12);
+conf_width6 = zeros(100,12);
+
+%The function is monotone on the whole interval
+for month = 1:12
+    for samples = 50:step_size/2:N/2
+        U_draw = rand(1, samples);
+        draw6 = wblinv(U_draw, lambda(month), k(month));
+        draw6_hat = wblinv(1-U_draw, lambda(month), k(month));
+        draw6_power = P(draw6);
+        draw6_hat_power = P(draw6_hat);
+        
+        W = (draw6_power+draw6_hat_power)./2;
+        
+        tau6((samples*2)/step_size, month) = mean(W);
+
+        %confindence interval
+        standard_dev=std(W);
+        upper_bound6((samples*2)/step_size, month) = tau6((samples*2)/step_size, month)+abs(norminv(0.995))*standard_dev/(sqrt(samples));
+        lower_bound6((samples*2)/step_size, month) = tau6((samples*2)/step_size, month)-abs(norminv(0.995))*standard_dev/(sqrt(samples));
+        conf_width6((samples*2)/step_size, month) = upper_bound6((samples*2)/step_size, month)-lower_bound6((samples*2)/step_size, month);
+    end
+end
+
+conf_width6(100, month_plot)
+
+figure(5);
+hold on
+title("Anthetic Sampling Monte-Carlo")
+plot(50:step_size/2:N/2,tau6(:,month_plot),'LineWidth',2.5,'color','r')
+plot(50:step_size/2:N/2,upper_bound6(:,month_plot),'--','LineWidth',1.5,'color','g')
+plot(50:step_size/2:N/2,lower_bound6(:,month_plot),'--','LineWidth',1.5,'color','g')
+hold off
 
 
+%% 2e)
+
+
+
+
+%Calculating probability explicitly
+Prob_explicit = zeros(1,12);
+%   Probability that P(V)>0 = Probability that 4 < V < 25
+
+for month = 1:12
+Prob_explicit(1, month) = Fab(b, month) - Fab(a, month);
+end
+
+
+
+%Estimate probability
+Prob_estimate = zeros(1,12);
+
+for month = 1:12
+    draw7 = wblrnd(lambda(month), k(month), 1, samples);
+    Prob_estimate(1, month) = Fab(b, month) - Fab(a, month);
+end
