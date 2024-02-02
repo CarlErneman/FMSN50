@@ -261,7 +261,7 @@ end
 
 conf_width6(100, month_plot)
 
-figure(5);
+figure(6);
 hold on
 title("Anthetic Sampling Monte-Carlo")
 plot(50:step_size/2:N/2,tau6(:,month_plot),'LineWidth',2.5,'color','r')
@@ -280,7 +280,7 @@ Prob_explicit = zeros(1,12);
 %   Probability that P(V)>0 = Probability that 4 < V < 25
 
 for month = 1:12
-Prob_explicit(1, month) = Fab(b, month) - Fab(a, month);
+    Prob_explicit(1, month) = Fab(b, month) - Fab(a, month);
 end
 
 
@@ -289,6 +289,46 @@ end
 Prob_estimate = zeros(1,12);
 
 for month = 1:12
-    draw7 = wblrnd(lambda(month), k(month), 1, samples);
-    Prob_estimate(1, month) = Fab(b, month) - Fab(a, month);
+    draw7 = wblrnd(lambda(month), k(month), 1, N);
+    draw7_power = P(draw7);
+    nbr_of_pos_power = length(find(draw7_power~=0));
+
+    Prob_estimate(1, month) = nbr_of_pos_power/N;
 end
+
+
+%% 2f)
+
+rho = 1.225;
+d = 240;
+m=3;
+P_tot = zeros(1, 12);
+ratio =zeros(1,12);
+
+P_tot_f = @(v) (1/2)*rho*pi*(d^2)*(v)/4; %Use expected value for Weibull
+
+%Use old simulation. The one with smallest CI. Antithetic sampling
+for month = 1:12
+    P_tot(month) = P_tot_f(gamma(1+(m/k(month)))*lambda(month)^m);
+    ratio(month) = tau6(100, month)/P_tot(month);
+    ratio_upper_bound = upper_bound6(100, month)/P_tot(month);
+    ratio_lower_bound = lower_bound6(100, month)/P_tot(month);
+end
+
+
+%% 2g)
+
+max_power = 15*10^6;
+capacity_factor = zeros(1,12);
+availability_factor = zeros(1,12);
+
+for month = 1:12
+    capacity_factor(month) = tau6(100, month)/max_power;
+    availability_factor(month) = Prob_explicit(month);
+end
+
+%High capacity factor, low availability
+average_capacity_factor=mean(capacity_factor);
+average_availability_factor = mean(availability_factor);
+
+
