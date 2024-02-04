@@ -332,3 +332,60 @@ average_capacity_factor=mean(capacity_factor);
 average_availability_factor = mean(availability_factor);
 
 
+%% 3
+%clear
+%load powercurve_D240.mat
+
+alpha = 0.638;
+p = 3;
+q = 1.5;
+
+k = 1.95;
+lambda = 10.05;
+
+f = @(x) wblpdf(x, lambda, k);
+F = @(x) wblcdf(x, lambda, k);
+
+f_joint = @(v1, v2) f(v1).*f(v2).*(1+alpha.*(1-F(v1).^p).^(q-1).*(1-F(v2).^p).^(q-1).*((F(v1).^p.*(1+p*q))-1).*((F(v2).^p.*(1+p*q))-1));
+F_cumulative = @(v1, v2) F(v1).*F(v2).*(1+alpha*(1-F(v1).^p).^q .*(1-F(v2).^p).^q);
+
+
+%% 3a)
+
+%Finding the new weight function w, i.e tuning g
+%Again choose normal distrobution. This time multivariate normal
+%distrobution
+
+%x = linspace(0, 30);
+x=0:0.01:35;
+
+%The mean of the best cases mu, and sigma found in 2c), with manual tuning.
+mu_joint = [1 1]*mean(mu_IS); %11.725
+sigma_sqrt_joint = eye(2)*mean(simga_sqrt_IS)*2.4; %9.72
+
+phi_x_joint = P(x);
+f_x_joint = f_joint(x, x);
+g_x_joint = mvnpdf([x' x'], mu_joint, sigma_sqrt_joint) * 4.7 *10^6;
+
+figure(7)
+hold on
+plot(x, phi_x_joint'.*f_x_joint, 'LineWidth', 1.5, 'color', 'g')
+plot(x, g_x_joint, 'LineWidth', 1.5, 'color', 'black')
+%legend('phi(x)', 'f(x)', 'phi(x)*f(x)', 'norm')
+hold off
+
+tau_joint = zeros(N/step_size, 1);
+
+for samples = 100:step_size:N
+
+    V = mvnrnd(mu_joint,sigma_sqrt_joint,N);
+    f = f_joint(V(:, 1), V(:, 2));
+    g = mvnpdf(V,mu_joint,sigma_sqrt_joint);
+    omega = f./g;
+
+    tau_joint(samples/step_size) = mean((P(V(:, 1))+P(V(:, 2))).*omega);
+end
+
+figure(8);
+title("Joint Importance Sampling Monte-Carlo")
+plot(100:step_size:N,tau_joint,'LineWidth',2.5,'color','r')
