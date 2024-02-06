@@ -118,7 +118,8 @@ for month = 1:12
     for samples = 100:step_size:N
 
         draw3 = wblrnd(lambda(month), k(month), 1, samples);
-        Y = wblrnd(lambda(month), k(month), 1, samples);
+        %Y = wblrnd(lambda(month), k(month), 1, samples);
+        Y = draw3;
         expected_Y = gamma(1+(1/k(month)))*lambda(month);
         
         draw_power3 = P(draw3);
@@ -361,14 +362,17 @@ x=0:0.01:35;
 
 %The mean of the best cases mu, and sigma found in 2c), with manual tuning.
 mu_joint = [1 1]*mean(mu_IS); %11.725
+mu_joint_1d = mean(mu_IS);
 %mu_joint = [1 1]*11.18;
 sigma_joint = eye(2)*mean(simga_sqrt_IS)*2.4; %9.72
+sigma_joint_1d = mean(simga_sqrt_IS);
 %sigma_joint = eye(2)*mean(simga_sqrt_IS)*4.4; %dubbla
 %sigma_joint = eye(2)*4;
 
 phi_x_joint = P(x);
 f_x_joint = f_joint(x, x);
 g_x_joint = mvnpdf([x' x'], mu_joint, sigma_joint);
+g_x_1d = normpdf(x, mu_joint_1d, sigma_joint_1d);
 
 figure(7)
 hold on
@@ -381,95 +385,107 @@ legend('f_{x joint}(x)', '\phi (x)*f_{x joint}(x)', '\phi (x)*\omega(x)', 'g(x)'
 hold off
 
 tau_joint = zeros(N/step_size, 1);
+tau_joint_1d = zeros(N/step_size, 1);
 
 for samples = 100:step_size:N
-
-    V = mvnrnd(mu_joint,sigma_joint,N);
+    V = mvnrnd(mu_joint, sigma_joint, samples);
+    X = normrnd(mu_joint_1d,sigma_joint_1d,1, samples);
+    Y = normrnd(mu_joint_1d,sigma_joint_1d,1, samples);
+    
     f = f_joint(V(:, 1), V(:, 2));
     g = mvnpdf(V,mu_joint,sigma_joint);
     omega = f./g;
+    omega1_1d = wblpdf(X, lambda, k)./normpdf(X, mu_joint_1d, sigma_joint_1d);
+    omega2_1d = wblpdf(Y, lambda, k)./normpdf(Y, mu_joint_1d, sigma_joint_1d);
+
+    draw_power1_joint = P(X)'.*omega1_1d;
+    draw_power2_joint = P(Y)'.*omega2_1d;
 
     tau_joint(samples/step_size) = mean((P(V(:, 1))+P(V(:, 2))).*omega);
+    tau1_joint = mean(draw_power1_joint');
+    tau2_joint = mean(draw_power2_joint');
+    tau_joint_1d(samples/step_size) = (tau1_joint + tau2_joint);
 end
 
 figure(8);
+hold on
 title("Joint Importance Sampling Monte-Carlo")
-plot(100:step_size:N,tau_joint,'LineWidth',2.5,'color','r')
-
-
-
+plot(100:step_size:N,tau_joint,'LineWidth',1.5,'color','r')
+plot(100:step_size:N,tau_joint_1d,'LineWidth',1.5,'color','b')
+legend('2D problem', '1D problem')
+hold off
 %% finding through heat-map
 %Hitta sigma, ej mu, genom heat-map. Då värdet är mest konstant
 %Constant in the support of g.
 %Plot, for different sigma, the mean derivative, under the main support
 %area of g.
 
-slope_matrix = zeros((20-1)/0.1, (20-1)/0.1, 3);
-tau_joint_test = zeros((20-1)/0.1, (20-1)/0.1, 3);
-
-iii = 1;
-for cov_int = 0:0.5:1
-    i=1;
-    for sigma1 = 1:0.1:20
-        j=1;
-        for sigma2 = 1:0.1:20
-            if cov_int== 1 && sigma1== 1 && sigma2== 1 
-                continue;
-            end
-            sigma_joint_test = [sigma1, cov_int; cov_int, sigma2];
-            V2 = mvnrnd(mu_joint,sigma_joint_test,N/100);
-    
-            f_test = f_joint(V2(:,1), V2(:,2));
-            g_test = mvnpdf(V2,mu_joint,sigma_joint_test);
-            omega_test = f_test./g_test;
-
-            P1 = P(V2(:,1));
-            P2 = P(V2(:,2));
-
-            tau_joint_test(i, j, iii) = mean((P(V2(:, 1))+P(V2(:, 2))).*omega_test);
-            std_temp = (sum((((P1+P1).*omega_test)-tau_joint_test(i, j, iii)).^2))/((N/100)-1);
-    
-            if std_temp > 10^16
-                slope_matrix(i, j, iii) = 10^16;
-            else
-                slope_matrix(i, j, iii) = std_temp;
-            end
-            j = j+1;
-        end
-        i = i+1;
-    end
-    iii = iii + 1;
-end
+% slope_matrix = zeros((20-1)/0.1, (20-1)/0.1, 3);
+% tau_joint_test = zeros((20-1)/0.1, (20-1)/0.1, 3);
+% 
+% iii = 1;
+% for cov_int = 0:0.5:1
+%     i=1;
+%     for sigma1 = 1:0.1:20
+%         j=1;
+%         for sigma2 = 1:0.1:20
+%             if cov_int== 1 && sigma1== 1 && sigma2== 1 
+%                 continue;
+%             end
+%             sigma_joint_test = [sigma1, cov_int; cov_int, sigma2];
+%             V2 = mvnrnd(mu_joint,sigma_joint_test,N/100);
+%     
+%             f_test = f_joint(V2(:,1), V2(:,2));
+%             g_test = mvnpdf(V2,mu_joint,sigma_joint_test);
+%             omega_test = f_test./g_test;
+% 
+%             P1 = P(V2(:,1));
+%             P2 = P(V2(:,2));
+% 
+%             tau_joint_test(i, j, iii) = mean((P(V2(:, 1))+P(V2(:, 2))).*omega_test);
+%             std_temp = (sum((((P1+P1).*omega_test)-tau_joint_test(i, j, iii)).^2))/((N/100)-1);
+%     
+%             if std_temp > 10^16
+%                 slope_matrix(i, j, iii) = 10^16;
+%             else
+%                 slope_matrix(i, j, iii) = std_temp;
+%             end
+%             j = j+1;
+%         end
+%         i = i+1;
+%     end
+%     iii = iii + 1;
+% end
 %% Plotting heatmap
 %title("Heatmap of standard deviation for different sigma, cov=0")
-figure(1)
-hmo1 = heatmap(1:0.1:20, 1:0.1:20, slope_matrix(:, :, 1));
-hmo1.Title = 'Heatmap of standard deviation for different sigma, cov=0';
-hmo1.XDisplayLabels = nan(size(hmo1.XDisplayData));
-hmo1.YDisplayLabels = nan(size(hmo1.YDisplayData));
-hmo1.XLabel = 'Sigma 1';
-hmo1.YLabel = 'Sigma 2';
-hmo1.ColorScaling = 'log';
-hmo1.Colormap = parula;
-%hom1.ColorLimits = [10^5, 10^8];
-
-figure(2)
-hmo2 = heatmap(1:0.1:20, 1:0.1:20, slope_matrix(:, :, 2));
-hmo2.Title = 'Heatmap of standard deviation for different sigma, cov=0.5';
-hmo2.XDisplayLabels = nan(size(hmo2.XDisplayData));
-hmo2.YDisplayLabels = nan(size(hmo2.YDisplayData));
-hmo2.XLabel = 'Sigma 1';
-hmo2.YLabel = 'Sigma 2';
-hmo2.ColorScaling = 'log'
-
-figure(3)
-hmo3 = heatmap(1:0.1:20, 1:0.1:20, slope_matrix(:, :, 3));
-hmo3.Title = 'Heatmap of standard deviation for different sigma, cov=1';
-hmo3.XDisplayLabels = nan(size(hmo3.XDisplayData));
-hmo3.YDisplayLabels = nan(size(hmo3.YDisplayData));
-hmo3.XLabel = 'Sigma 1';
-hmo3.YLabel = 'Sigma 2';
-hmo3.ColorScaling = 'log'
+% figure(1)
+% hmo1 = heatmap(1:0.1:20, 1:0.1:20, slope_matrix(:, :, 1));
+% hmo1.Title = 'Heatmap of standard deviation for different sigma, cov=0';
+% hmo1.XDisplayLabels = nan(size(hmo1.XDisplayData));
+% hmo1.YDisplayLabels = nan(size(hmo1.YDisplayData));
+% hmo1.XLabel = 'Sigma 1';
+% hmo1.YLabel = 'Sigma 2';
+% hmo1.ColorScaling = 'log';
+% hmo1.Colormap = parula;
+% %hom1.ColorLimits = [10^5, 10^8];
+% 
+% figure(2)
+% hmo2 = heatmap(1:0.1:20, 1:0.1:20, slope_matrix(:, :, 2));
+% hmo2.Title = 'Heatmap of standard deviation for different sigma, cov=0.5';
+% hmo2.XDisplayLabels = nan(size(hmo2.XDisplayData));
+% hmo2.YDisplayLabels = nan(size(hmo2.YDisplayData));
+% hmo2.XLabel = 'Sigma 1';
+% hmo2.YLabel = 'Sigma 2';
+% hmo2.ColorScaling = 'log'
+% 
+% figure(3)
+% hmo3 = heatmap(1:0.1:20, 1:0.1:20, slope_matrix(:, :, 3));
+% hmo3.Title = 'Heatmap of standard deviation for different sigma, cov=1';
+% hmo3.XDisplayLabels = nan(size(hmo3.XDisplayData));
+% hmo3.YDisplayLabels = nan(size(hmo3.YDisplayData));
+% hmo3.XLabel = 'Sigma 1';
+% hmo3.YLabel = 'Sigma 2';
+% hmo3.ColorScaling = 'log'
 
 
 %% 3b) Covariance
@@ -506,7 +522,7 @@ phi2_f = zeros(60, 60);
 phi_f_g_1 = zeros(60, 60);
 phi_f_g_2 = zeros(60, 60);
 
-f_joint_conf = f_joint(x3d, y3d);
+f_joint_conf = f_joint(0:0.5:30, 0:0.5:30);
 
 
 for x3d = 0.5:0.5:30
