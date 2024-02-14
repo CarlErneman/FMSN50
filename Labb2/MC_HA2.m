@@ -19,8 +19,8 @@ c_n = zeros(n,1);
 
 for particle = 1:N
     for stepnbr = 2:n
-        dir = datasample(dir_mat,1);
-        X(stepnbr, :, particle) = X(stepnbr-1, :, particle) + dir;
+        nextX = datasample(dir_mat,1);
+        X(stepnbr, :, particle) = X(stepnbr-1, :, particle) + nextX;
 
         %Check new step against all old steps. If not SAW, increase
         %error counter
@@ -61,19 +61,19 @@ N_sa = zeros(n,1);
 c_n = zeros(n,1);
 
 
-for particle = 1:N
-    for stepnbr = 2:n
-        dir = datasample(dir_mat,1);
-        X(stepnbr, :, particle) = X(stepnbr-1, :, particle) + dir;
 
-        %Check new step against all old steps. If not SAW, increase
-        %error counter
-        if ~ismember(X(stepnbr, :, particle), X(1:stepnbr-1, :, particle), 'rows')
-            N_sa(stepnbr, 1) = N_sa(stepnbr, 1) + 1;
+for particle = 1:N
+    for stepnbr = 1:n
+        X_ki_steps = X(stepnbr, :, particle) + dir_mat;
+        X_0ki = X(1:stepnbr, :, particle);
+        free_coordinates = setdiff(X_ki_steps, X_0ki, 'rows');
+
+        if isempty(free_coordinates)
+            X(stepnbr+1, :, particle) = X(stepnbr, :, particle);
         else
-            break;
+            nextX = datasample(free_coordinates,1);
+            X(stepnbr+1, :, particle) = nextX;
         end
     end
 end
-
 
