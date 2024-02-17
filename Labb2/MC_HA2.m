@@ -58,8 +58,8 @@ N = 10000; %Nbr of particles
 X = zeros(n, d, N);
 dir_mat = [eye(d); -1*eye(d)];
 N_sa = zeros(n,1);
-c_n = zeros(n,1);
-
+c_n4 = zeros(n,1);
+w_i = [ones(1, N); zeros(n, N)];
 
 
 for particle = 1:N
@@ -70,10 +70,66 @@ for particle = 1:N
 
         if isempty(free_coordinates)
             X(stepnbr+1, :, particle) = X(stepnbr, :, particle);
+            w_i(stepnbr+1, particle) = 0;
         else
             nextX = datasample(free_coordinates,1);
             X(stepnbr+1, :, particle) = nextX;
+            nextXnbr = size(free_coordinates, 1);
+            w_i(stepnbr+1, particle) = w_i(stepnbr, particle)*nextXnbr;
         end
     end
 end
 
+for stepnbr = 2:n
+    c_n4(stepnbr,1) = (mean(w_i(stepnbr, :)));
+end
+
+fprintf('c_n from 1 to %i steps: \r\n', n-1)
+disp(c_n4(2:n, 1))
+
+
+%% 5). Sequential Importance Sampling With Resampling
+
+disp("-----------------------------------------------------------------")
+disp("Sequential Importance Sampling With Resampling")
+
+
+n = 10 + 1; %Nbr of steps +1(to ignore the initial state)
+d = 2; %Dimensions
+N = 10000; %Nbr of particles
+
+
+X = zeros(n, d, N);
+dir_mat = [eye(d); -1*eye(d)];
+N_sa = zeros(n,1);
+
+c_n5 = zeros(n,1);
+c_n5(1) = 1;
+w_i = ones(n, N);
+
+
+for stepnbr = 1:n
+    ind = randsample(N, N, true, w_i(stepnbr, :));
+    X(1:stepnbr, :, :) = X(1:stepnbr, :, ind);
+    for particle = 1:N
+        X_ki_steps = X(stepnbr, :, particle) + dir_mat;
+        X_0ki = X(1:stepnbr, :, particle);
+        free_coordinates = setdiff(X_ki_steps, X_0ki, 'rows');
+
+        if isempty(free_coordinates)
+            X(stepnbr+1, :, particle) = X(stepnbr, :, particle);
+            w_i(stepnbr+1, particle) = 0;
+        else
+            nextX = datasample(free_coordinates,1);
+            X(stepnbr+1, :, particle) = nextX;
+            nextXnbr = size(free_coordinates, 1);
+            w_i(stepnbr+1, particle) = nextXnbr;
+        end
+    end
+end
+
+for stepnbr = 1:n
+    c_n5(stepnbr+1,1) = c_n5(stepnbr,1)*mean(w_i(stepnbr+1, :));
+end
+
+c_n5 = round(c_n5)
