@@ -135,7 +135,8 @@ for stepnbr = 1:n
     c_n5(stepnbr+1,1) = c_n5(stepnbr,1)*mean(w_i(stepnbr+1, :));
 end
 
-c_n5 = round(c_n5)
+%c_n5 = round(c_n5)
+%c_n5
 
 %% 6).
 
@@ -314,22 +315,18 @@ p2.Color = 'red';
 p2.Marker = 'o';
 hold off;
 
-figure(3)
-p3 = plot(tauLower, '--r');
+figure(3);
 hold on;
-p4 = plot(tauUpper, '--r');
-hold on;
-p5 = plot(X, '-k');
-grid on;
-xlim([0, 101]);
-ylim([0, 1]);
-title("95% Point Wise Confidence Interval and True Values of X")
-xlabel("Generation");
+p3 = plot(tau,"--o");
+p4 = plot(X,"*");
+p5 = plot(tauLower,"black");
+p6 = plot(tauUpper,"black");
+xlabel("Generation (time step = k) with N = 10000");
 ylabel("Relative population size");
-hold off;
-p3.Color = 'red';
-p3.Marker = '*';
-p4.Color = 'red';
-p4.Marker = '*';
-p5.Color = 'blue';
-p5.Marker = 'o';
+p3.MarkerSize = 7;
+p4.MarkerSize = 7;
+p3.Color = "blue";
+p4.Color = "red";
+legend("Filter expectation", "True values", "Lower 2.5 % quantile",... 
+    "Upper 2.5 % quantile");
+xlim([0 100]);
