@@ -9,7 +9,7 @@ function [accepted_proposals,t] = MH_algorithm(t,lambda, tau, rho)
         t_star = 0;
         
         %Generate t_star and make sure it is in the interval [t(i), t(i+1))
-        while (~(t_star >= t(i) && t_star < t(i+1)))
+        while (~(t_star > t(i-1) && t_star < t(i+1)))
             R = rho(1) * (t(i + 1) - t(i - 1));
             epsil = 2*R*rand(1,1)-R;
             t_star =  t(i) + epsil;

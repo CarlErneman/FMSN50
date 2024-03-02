@@ -32,7 +32,7 @@ for i = 2:d
     
     % Construct the breakpoints-vector 
     step_size = (t_end - t_start)/i;
-    t_middle = t_first:step_size:t_end;
+    t_middle = t_start:step_size:t_end;
     t = [t_start,t_middle(2:end-1),t_end];
     breakpoints_update = zeros(N, length(t));
     
@@ -41,6 +41,7 @@ for i = 2:d
         % Draw theta from corresponding marginal posterior distribution
         theta =  gamrnd(2*length(lambda) + 2, 1./(psi + sum(lambda)));
         % Draw lambda from corresponding marginal posterior distribution
-        lambda = 
+        lambda = posterior_lambda(theta, t, tau);
+        [accepted_proposals,t] = MH_algorithm(t, lambda, tau, rho);
     end
 end
