@@ -28,3 +28,4 @@ function [accepted_proposals,t] = MH_algorithm(t,lambda, tau, rho)
     end
 end
 
+
