@@ -11,7 +11,7 @@ t_end = 1980;
 
 % Number of samples (N), breakpoints (d) and burn-in (burn_in)
 N = 25000;
-d = 6; %Was 6
+d = 8; %Was 6
 burn_in = 10000;
 
 % Assign value to the hyperparameter (Psi) 
